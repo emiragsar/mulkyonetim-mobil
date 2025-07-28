@@ -1,0 +1,6 @@
+{
+    "ADMIN": "admin",
+    "OWNER": "owner",
+    "TENANT": "tenant",
+    "MASTER": "master"
+}

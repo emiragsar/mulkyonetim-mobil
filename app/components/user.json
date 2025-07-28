@@ -1,0 +1,21 @@
+{
+    "id": null,
+    "email": null,
+    "phone": null,
+    "password": null,
+    "name": null,
+    "fullName": null,
+    "avatar": null,
+    "address": null,
+    "apartment": null,
+    "site": null,
+    "memberSince": null,
+    "status": null,
+    "type": null,
+    "communicationPreferences": {
+        "emailCampaigns": null,
+        "smsCampaigns": null,
+        "pushNotifications": null,
+        "managementEmails": null
+    }
+}

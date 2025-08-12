@@ -1,47 +1,110 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
-const DataTableCard = ({ title, children }) => {
+// React Native component equivalents
+import { Card } from "react-native-paper";
+
+// Custom components (bunları da oluşturmanız gerekecek)
+import DashboardLayout from "../dashboardlayout";
+import DataTable from "../tables";
+
+const Tables = () => {
+  const { columns, rows } = authorsTableData();
+  const { columns: pColumns, rows: pRows } = projectsTableData();
+
   return (
-    <View style={styles.card}>
-      {/* Mavi Başlık Alanı (React'taki MDBox gibi) */}
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{title}</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <DashboardLayout>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.gridContainer}>
+            {/* Authors Table Card */}
+            <Card style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Authors Table</Text>
+              </View>
+              <View style={styles.cardContent}>
+                <DataTable
+                  data={{ columns, rows }}
+                  isSorted={false}
+                  entriesPerPage={false}
+                  showTotalEntries={false}
+                  noEndBorder
+                />
+              </View>
+            </Card>
 
-      {/* Kartın İçeriği (DataTable, kontroller vb. buraya gelecek) */}
-      <View style={styles.cardContent}>{children}</View>
-    </View>
+            {/* Projects Table Card */}
+            <Card style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Projects Table</Text>
+              </View>
+              <View style={styles.cardContent}>
+                <DataTable
+                  data={{ columns: pColumns, rows: pRows }}
+                  isSorted={false}
+                  entriesPerPage={false}
+                  showTotalEntries={false}
+                  noEndBorder
+                />
+              </View>
+            </Card>
+          </View>
+        </ScrollView>
+      </DashboardLayout>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  content: {
+    flex: 1,
+    paddingTop: 24,
+    paddingBottom: 12,
+  },
+  gridContainer: {
+    paddingHorizontal: 16,
+    gap: 24,
+  },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    elevation: 3, // Android için gölge
-    shadowColor: "#000", // iOS için gölge
-    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 24,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    marginBottom: 16, // Diğer kartlarla arasında boşluk
   },
   cardHeader: {
-    backgroundColor: "#3498db", // Mavi başlık
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    backgroundColor: "#1976d2", // info color
+    marginHorizontal: 8,
+    marginTop: -12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    shadowColor: "#1976d2",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   cardTitle: {
-    color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
+    color: "white",
   },
   cardContent: {
-    // İçerik için ekstra stil gerekirse buraya eklenebilir.
-    // Örneğin padding: 16
+    paddingTop: 12,
   },
 });
 
-export default DataTableCard;
+export default Tables;

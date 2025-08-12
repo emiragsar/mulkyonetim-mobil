@@ -1,217 +1,226 @@
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React from "react";
+import React from 'react';
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
-} from "react-native";
-import ButtonLayout from "../input/ButtonLayout";
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'expo-router';
 
-export default function Settings() {
-  const handleItemPress = (itemName) => {
-    router.push(itemName);
-  };
+const Settings = () => {
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   const handleLogout = () => {
-    console.log("Settings'ten çıkış yap butonuna basıldı");
-    Alert.alert("Çıkış Yap", "Çıkış yapmak istediğinizden emin misiniz?", [
-      { text: "İptal", style: "cancel" },
-      {
-        text: "Çıkış Yap",
-        onPress: () => {
-          console.log("Settings'ten çıkış işlemi başlatılıyor...");
-          // Basit logout - ana sayfaya yönlendir
-          router.replace("/(screens)/Login");
+    Alert.alert(
+      'Çıkış Yap',
+      'Hesabınızdan çıkış yapmak istediğinizden emin misiniz?',
+      [
+        {
+          text: 'İptal',
+          style: 'cancel',
         },
-      },
-    ]);
+        {
+          text: 'Çıkış Yap',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              router.replace('/(screens)/Login');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Hata', 'Çıkış yapılırken bir hata oluştu.');
+            }
+          },
+        },
+      ]
+    );
   };
 
+  const settingsItems = [
+    {
+      title: 'Profil',
+      icon: 'person-outline',
+      onPress: () => router.push('/(setting)/(profile)/ProfileSettings'),
+    },
+    {
+      title: 'İletişim Ayarları',
+      icon: 'call-outline',
+      onPress: () => router.push('/(setting)/ContactSettings'),
+    },
+    {
+      title: 'Dil Ayarları',
+      icon: 'language-outline',
+      onPress: () => router.push('/(setting)/LanguageSettings'),
+    },
+    {
+      title: 'Geri Bildirim',
+      icon: 'chatbubble-outline',
+      onPress: () => router.push('/(setting)/(other)/Feedback'),
+    },
+    {
+      title: 'Kullanıcı Sözleşmesi',
+      icon: 'document-text-outline',
+      onPress: () => router.push('/(setting)/(legal)/UserAgreement'),
+    },
+    {
+      title: 'Gizlilik Politikası',
+      icon: 'shield-checkmark-outline',
+      onPress: () => router.push('/(setting)/(legal)/PrivacyAgreement'),
+    },
+    {
+      title: 'KVKK',
+      icon: 'lock-closed-outline',
+      onPress: () => router.push('/(setting)/(legal)/kvkk'),
+    },
+  ];
+
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.content}>
-        {/* GENEL AYARLAR */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>GENEL AYARLAR</Text>
-          <View style={styles.sectionContent}>
-            <TouchableOpacity
-              onPress={() => handleItemPress("/(setting)/LanguageSettings")}
-              style={styles.settingItem}
-            >
-              <Text style={styles.settingText}>Dil</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleItemPress("/(setting)/ContactSettings")}
-              style={[styles.settingItem, styles.lastItem]}
-            >
-              <Text style={styles.settingText}>İletişim Ayarları</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-          </View>
+    <ScrollView style={styles.container}>
+      {/* User Info Section */}
+      <View style={styles.userSection}>
+        <View style={styles.avatarContainer}>
+          <Ionicons name="person-circle" size={60} color="#09b2e5" />
         </View>
+        <Text style={styles.userName}>
+          {user?.ad} {user?.soyad}
+        </Text>
+        <Text style={styles.userEmail}>{user?.email}</Text>
+        <Text style={styles.userRole}>
+          {user?.admin ? 'Admin' : 
+           user?.ev_sahibi ? 'Ev Sahibi' :
+           user?.kiraci ? 'Kiracı' :
+           user?.usta ? 'Usta' :
+           user?.yatirimci ? 'Yatırımcı' : 'Kullanıcı'}
+        </Text>
+      </View>
 
-        {/* PROFİL AYARLARI */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>PROFİL AYARLARI</Text>
-          <View style={styles.sectionContent}>
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() =>
-                handleItemPress("/(setting)/(profile)/PersonalInfoScreen")
-              }
-            >
-              <Text style={styles.settingText}>Kişisel Bilgiler</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleItemPress("/(setting)/(profile)/MySites")}
-              style={styles.settingItem}
-            >
-              <Text style={styles.settingText}>Sitelerim</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() =>
-                handleItemPress("/(setting)/(profile)/MyApartments")
-              }
-              style={styles.settingItem}
-            >
-              <Text style={styles.settingText}>Dairelerim</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() =>
-                handleItemPress("/(setting)/(profile)/CardsAndOrders")
-              }
-              style={styles.settingItem}
-            >
-              <Text style={styles.settingText}>Kartlarım ve Talimatlarım</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() =>
-                handleItemPress("/(setting)/(profile)/ChangePassword")
-              }
-              style={[styles.settingItem, styles.lastItem]}
-            >
-              <Text style={styles.settingText}>Şifre Değiştir</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-          </View>
-        </View>
+      {/* Settings Items */}
+      <View style={styles.settingsSection}>
+        {settingsItems.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.settingItem}
+            onPress={item.onPress}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingItemLeft}>
+              <Ionicons name={item.icon} size={24} color="#2c3e50" />
+              <Text style={styles.settingItemText}>{item.title}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {/* DİĞER */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DİĞER</Text>
-          <View style={styles.sectionContent}>
-            <TouchableOpacity
-              onPress={() => handleItemPress("/(setting)/(other)/Feedback")}
-              style={[styles.settingItem, styles.lastItem]}
-            >
-              <Text style={styles.settingText}>Geri Bildirim</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-          </View>
-        </View>
+      {/* Logout Section */}
+      <View style={styles.logoutSection}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#e74c3c" />
+          <Text style={styles.logoutText}>Çıkış Yap</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* YASAL METİNLER */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>YASAL METİNLER</Text>
-          <View style={styles.sectionContent}>
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() =>
-                handleItemPress("/(setting)/(legal)/UserAgreement")
-              }
-            >
-              <Text style={styles.settingText}>Kullanıcı Sözleşmesi</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => handleItemPress("/(setting)/(legal)/kvkk")}
-            >
-              <Text style={styles.settingText}>KVKK Aydınlatma Metni</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.settingItem, styles.lastItem]}
-              onPress={() =>
-                handleItemPress("/(setting)/(legal)/PrivacyAgreement")
-              }
-            >
-              <Text style={styles.settingText}>Gizlilik Sözleşmesi</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <View style={styles.logoutContainer}>
-          <ButtonLayout
-            onClick={handleLogout}
-            ButtonText="Çıkış Yap"
-            color1="#e74c3c"
-          />
-        </View>
-      </ScrollView>
-    </View>
+      {/* App Version */}
+      <View style={styles.versionSection}>
+        <Text style={styles.versionText}>Versiyon 1.0.0</Text>
+      </View>
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: '#f5f5f5',
   },
-  content: {
-    flex: 1,
-    paddingTop: 20,
+  userSection: {
+    backgroundColor: '#fff',
+    padding: 20,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  section: {
-    marginBottom: 20,
+  avatarContainer: {
+    marginBottom: 10,
   },
-  sectionTitle: {
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 5,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginBottom: 5,
+  },
+  userRole: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#666",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    color: '#09b2e5',
+    fontWeight: '500',
   },
-  sectionContent: {
-    backgroundColor: "#fff",
-    marginHorizontal: 10,
+  settingsSection: {
+    backgroundColor: '#fff',
+    marginTop: 20,
     borderRadius: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginHorizontal: 16,
+    overflow: 'hidden',
   },
   settingItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: '#f0f0f0',
   },
-  lastItem: {
-    borderBottomWidth: 0,
+  settingItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  settingText: {
+  settingItemText: {
     fontSize: 16,
-    color: "#333",
+    color: '#2c3e50',
+    marginLeft: 12,
   },
-  logoutContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 40,
+  logoutSection: {
+    marginTop: 20,
+    marginHorizontal: 16,
+  },
+  logoutButton: {
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#e74c3c',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  versionSection: {
+    alignItems: 'center',
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  versionText: {
+    fontSize: 12,
+    color: '#95a5a6',
   },
 });
+
+export default Settings;

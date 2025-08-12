@@ -4,15 +4,13 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import Footer from "../components/footer/index";
-
-const API_BASE_URL = "http://192.168.1.107:8000";
+import DashboardLayout from "../components/dashboardlayout";
+import API_BASE_URL from "../../config/api";
 
 const DashboardCard = ({ title, value, icon, color, onPress, loading }) => (
   <TouchableOpacity
@@ -112,7 +110,7 @@ export default function Dashboard() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <DashboardLayout>
       <View style={styles.content}>
         {/* Header with refresh button */}
         <View style={styles.header}>
@@ -165,10 +163,8 @@ export default function Dashboard() {
             <Text style={styles.loadingText}>Veriler yükleniyor...</Text>
           </View>
         )}
-
-        <Footer />
       </View>
-    </ScrollView>
+    </DashboardLayout>
   );
 }
 

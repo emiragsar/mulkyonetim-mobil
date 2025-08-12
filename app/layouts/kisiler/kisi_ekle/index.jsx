@@ -1,3 +1,4 @@
+import DashboardLayout from "@/app/components/dashboardlayout";
 import axios from "axios";
 import React, { useState } from "react";
 import {
@@ -5,7 +6,6 @@ import {
   Alert,
   FlatList,
   Modal,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -13,8 +13,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const API_BASE_URL = "http://192.168.1.107:8000";
+import MDInput from "@/app/components/MDInput";
+import MDButton from "@/app/components/MDButton";
+import API_BASE_URL from "@/config/api";
+import SelectionModal from "@/app/components/SelectionModal";
 
 const alan = [
   "Elektrik",
@@ -35,7 +37,6 @@ const KisiEkle = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [alanModalVisible, setAlanModalVisible] = useState(false);
 
   const [formData, setFormData] = useState({
     Ad: "",
@@ -171,17 +172,6 @@ const KisiEkle = () => {
     }
   };
 
-  const selectAlan = (selectedAlan) => {
-    handleFieldChange("Alan", selectedAlan);
-    setAlanModalVisible(false);
-  };
-
-  const renderAlanItem = ({ item }) => (
-    <TouchableOpacity style={styles.modalItem} onPress={() => selectAlan(item)}>
-      <Text style={styles.modalItemText}>{item}</Text>
-    </TouchableOpacity>
-  );
-
   const SwitchRow = ({ label, value, onValueChange }) => (
     <View style={styles.switchRow}>
       <Text style={styles.switchLabel}>{label}</Text>
@@ -195,263 +185,244 @@ const KisiEkle = () => {
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Yeni Kişi Ekle</Text>
-      </View>
-
-      <View style={styles.content}>
-        {/* Error/Success Messages */}
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        {success ? (
-          <View style={styles.successContainer}>
-            <Text style={styles.successText}>{success}</Text>
-          </View>
-        ) : null}
-
-        {/* Kişisel Bilgiler */}
-        <Text style={styles.sectionTitle}>Kişisel Bilgiler</Text>
-
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Ad *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Ad}
-              onChangeText={(text) => handleFieldChange("Ad", text)}
-              placeholder="Ad giriniz"
-            />
+    <DashboardLayout>
+      <View style={styles.container}>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.blueHeader}>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Yeni Kişi Ekle</Text>
+            </View>
           </View>
 
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Soyad *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Soyad}
-              onChangeText={(text) => handleFieldChange("Soyad", text)}
-              placeholder="Soyad giriniz"
-            />
-          </View>
-        </View>
+          <View style={styles.formContainer}>
+            {/* Error/Success Messages */}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>TC Kimlik Numarası</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.TC_Kimlik}
-              onChangeText={handleTCKimlikChange}
-              placeholder="TC Kimlik No"
-              keyboardType="numeric"
-              maxLength={11}
-            />
-          </View>
+            {success ? (
+              <View style={styles.successContainer}>
+                <Text style={styles.successText}>{success}</Text>
+              </View>
+            ) : null}
 
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Telefon</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Telefon}
-              onChangeText={(text) => handleFieldChange("Telefon", text)}
-              placeholder="Telefon numarası"
-              keyboardType="phone-pad"
-            />
-          </View>
-        </View>
+            {/* Kişisel Bilgiler */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Kişisel Bilgiler</Text>
 
-        <Text style={styles.inputLabel}>E-posta</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.Mail}
-          onChangeText={(text) => handleFieldChange("Mail", text)}
-          placeholder="E-posta adresi"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.Ad}
+                    onChangeText={(text) => handleFieldChange("Ad", text)}
+                    placeholder="Ad giriniz"
+                  />
+                </View>
 
-        <Text style={styles.inputLabel}>Adres</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={formData.Adres}
-          onChangeText={(text) => handleFieldChange("Adres", text)}
-          placeholder="Adres bilgisi"
-          multiline
-          numberOfLines={3}
-        />
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.Soyad}
+                    onChangeText={(text) => handleFieldChange("Soyad", text)}
+                    placeholder="Soyad giriniz"
+                  />
+                </View>
+              </View>
 
-        {/* Roller */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Roller</Text>
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.TC_Kimlik}
+                    onChangeText={handleTCKimlikChange}
+                    placeholder="TC Kimlik No"
+                    keyboardType="numeric"
+                    maxLength={11}
+                  />
+                </View>
 
-        <View style={styles.switchContainer}>
-          <SwitchRow
-            label="Ev Sahibi"
-            value={formData.Ev_Sahibi}
-            onValueChange={(value) => handleFieldChange("Ev_Sahibi", value)}
-          />
-          <SwitchRow
-            label="Kiracı"
-            value={formData.Kiraci}
-            onValueChange={(value) => handleFieldChange("Kiraci", value)}
-          />
-          <SwitchRow
-            label="Usta"
-            value={formData.Usta}
-            onValueChange={(value) => handleFieldChange("Usta", value)}
-          />
-          <SwitchRow
-            label="Yatırımcı"
-            value={formData.Yatirimci}
-            onValueChange={(value) => handleFieldChange("Yatirimci", value)}
-          />
-          <SwitchRow
-            label="Admin"
-            value={formData.Admin}
-            onValueChange={(value) => handleFieldChange("Admin", value)}
-          />
-        </View>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.Telefon}
+                    onChangeText={(text) => handleFieldChange("Telefon", text)}
+                    placeholder="Telefon numarası"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
 
-        {/* Mesleki Bilgiler */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Mesleki Bilgiler</Text>
+              <MDInput
+                size="small"
+                value={formData.Mail}
+                onChangeText={(text) => handleFieldChange("Mail", text)}
+                placeholder="E-posta adresi"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Alan</Text>
-            <TouchableOpacity
-              style={styles.pickerButton}
-              onPress={() => setAlanModalVisible(true)}
+              <MDInput
+                size="small"
+                value={formData.Adres}
+                onChangeText={(text) => handleFieldChange("Adres", text)}
+                placeholder="Adres bilgisi"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Roller */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Roller</Text>
+
+              <View style={styles.switchContainer}>
+                <SwitchRow
+                  label="Ev Sahibi"
+                  value={formData.Ev_Sahibi}
+                  onValueChange={(value) =>
+                    handleFieldChange("Ev_Sahibi", value)
+                  }
+                />
+                <SwitchRow
+                  label="Kiracı"
+                  value={formData.Kiraci}
+                  onValueChange={(value) => handleFieldChange("Kiraci", value)}
+                />
+                <SwitchRow
+                  label="Usta"
+                  value={formData.Usta}
+                  onValueChange={(value) => handleFieldChange("Usta", value)}
+                />
+                <SwitchRow
+                  label="Yatırımcı"
+                  value={formData.Yatirimci}
+                  onValueChange={(value) =>
+                    handleFieldChange("Yatirimci", value)
+                  }
+                />
+                <SwitchRow
+                  label="Admin"
+                  value={formData.Admin}
+                  onValueChange={(value) => handleFieldChange("Admin", value)}
+                />
+              </View>
+            </View>
+
+            {/* Mesleki Bilgiler */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Mesleki Bilgiler</Text>
+
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <SelectionModal
+                    title="Çalışma Alanı Seçin"
+                    placeholder="Çalışma alanı seçin"
+                    value={formData.Alan}
+                    data={alan}
+                    onSelect={(value) => handleFieldChange("Alan", value)}
+                  />
+                </View>
+
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.Isletme}
+                    onChangeText={(text) => handleFieldChange("Isletme", text)}
+                    placeholder="Çalıştığı İşletme"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Puanlama */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Puanlama</Text>
+
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.Kiraci_Skor?.toString() || ""}
+                    onChangeText={(text) =>
+                      handleFieldChange("Kiraci_Skor", text)
+                    }
+                    placeholder="Kiracı Skoru"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small"
+                    value={formData.Usta_Skor?.toString() || ""}
+                    onChangeText={(text) =>
+                      handleFieldChange("Usta_Skor", text)
+                    }
+                    placeholder="Usta Skoru"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Save Button */}
+            <MDButton
+              variant="contained"
+              onPress={handleSavePerson}
+              loading={loading}
+              color="success"
+              textColor="white"
+              sx={{
+                width: "100%",
+                marginTop: 24,
+              }}
             >
-              <Text
-                style={
-                  formData.Alan
-                    ? styles.pickerButtonText
-                    : styles.pickerPlaceholder
-                }
-              >
-                {formData.Alan || "Çalışma alanı seçin"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>İşletme</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Isletme}
-              onChangeText={(text) => handleFieldChange("Isletme", text)}
-              placeholder="Çalıştığı işletme"
-            />
+              Kişi Ekle
+            </MDButton>
           </View>
         </View>
-
-        {/* Puanlama */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Puanlama</Text>
-
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Kiracı Skoru</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Kiraci_Skor?.toString() || ""}
-              onChangeText={(text) => handleFieldChange("Kiraci_Skor", text)}
-              placeholder="0-5 arası"
-              keyboardType="decimal-pad"
-            />
-          </View>
-
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Usta Skoru</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Usta_Skor?.toString() || ""}
-              onChangeText={(text) => handleFieldChange("Usta_Skor", text)}
-              placeholder="0-5 arası"
-              keyboardType="decimal-pad"
-            />
-          </View>
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSavePerson}
-          disabled={loading}
-        >
-          {loading ? (
-            <View style={styles.buttonContent}>
-              <ActivityIndicator color="#FFFFFF" size="small" />
-              <Text style={[styles.saveButtonText, { marginLeft: 10 }]}>
-                Kaydediliyor...
-              </Text>
-            </View>
-          ) : (
-            <Text style={styles.saveButtonText}>Kişi Ekle</Text>
-          )}
-        </TouchableOpacity>
       </View>
-
-      {/* Alan Selection Modal */}
-      <Modal
-        visible={alanModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setAlanModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Çalışma Alanı Seçin</Text>
-              <TouchableOpacity
-                onPress={() => setAlanModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={alan}
-              renderItem={renderAlanItem}
-              keyExtractor={(item) => item}
-            />
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
+    </DashboardLayout>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#f8f9fa",
   },
-  header: {
-    backgroundColor: "#4CAF50",
-    padding: 20,
-    paddingTop: 50,
-  },
-  headerTitle: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  content: {
-    padding: 20,
-    backgroundColor: "white",
-    margin: 10,
-    borderRadius: 8,
-    elevation: 3,
+  headerSection: {
+    backgroundColor: "#fff",
+    margin: 16,
+    borderRadius: 12,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: "hidden",
+  },
+  blueHeader: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  formContainer: {
+    padding: 20,
   },
   errorContainer: {
     backgroundColor: "#FFEBEE",
@@ -477,11 +448,17 @@ const styles = StyleSheet.create({
     color: "#2E7D32",
     fontSize: 14,
   },
+  sectionContainer: {
+    marginBottom: 24,
+  },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 16,
+    fontSize: 16,
+    fontWeight: "600",
     color: "#333",
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingBottom: 8,
   },
   inputLabel: {
     fontSize: 14,
@@ -502,12 +479,13 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: "top",
   },
-  row: {
+  inputRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 16,
   },
-  halfWidth: {
-    width: "48%",
+  inputHalf: {
+    flex: 0.48,
   },
   switchContainer: {
     marginVertical: 10,
@@ -561,45 +539,6 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    width: "80%",
-    maxHeight: "70%",
-    borderRadius: 10,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  modalCloseButton: {
-    padding: 5,
-  },
-  modalCloseText: {
-    fontSize: 20,
-    color: "#666",
-  },
-  modalItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: "#333",
   },
 });
 

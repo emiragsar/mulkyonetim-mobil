@@ -9,8 +9,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/context/AuthContext";
 
 const menuItems = [
   {
@@ -29,6 +31,10 @@ const menuItems = [
       {
         title: "Kişi Ekle",
         route: "/layouts/kisiler/kisi_ekle/",
+      },
+      {
+        title: "Kişi Düzenle",
+        route: "/layouts/kisiler/kisi_duzenle/",
       },
       {
         title: "Ev Sahipleri",
@@ -132,14 +138,45 @@ const menuItems = [
       },
     ],
   },
+  {
+    title: "Ilanlar",
+    icon: "grid-outline",
+    route: "/layouts/ilan/",
+    isExpanded: false,
+    type: "normal",
+  },
+  {
+    title: "Rezervasyon",
+    icon: "calendar-outline",
+    route: "/layouts/rezervasyon/",
+    isExpanded: false,
+    type: "normal",
+  },
 ];
 
 export default function CustomDrawerContent(props) {
   const router = useRouter();
   const { navigation } = props;
+  const { logout } = useAuth();
   const [activeRoute, setActiveRoute] = useState("/layouts/");
   const [expandedItems, setExpandedItems] = useState({});
   const insets = useSafeAreaInsets();
+
+  // Web'de ESC tuşu ile drawer'ı kapatma
+  React.useEffect(() => {
+    if (Platform.OS === "web") {
+      const handleKeyPress = (event) => {
+        if (event.key === "Escape") {
+          closeDrawer();
+        }
+      };
+
+      document.addEventListener("keydown", handleKeyPress);
+      return () => {
+        document.removeEventListener("keydown", handleKeyPress);
+      };
+    }
+  }, []);
 
   const handleNavigation = (route) => {
     setActiveRoute(route);
@@ -148,24 +185,65 @@ export default function CustomDrawerContent(props) {
     closeDrawer();
   };
 
-  const handleLogout = () => {
-    closeDrawer();
-    router.replace("/(screens)/Login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      closeDrawer();
+      router.replace("/authentication/Login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Hata durumunda da yine login sayfasına yönlendir
+      closeDrawer();
+      router.replace("/authentication/Login");
+    }
   };
 
   const closeDrawer = () => {
     console.log("Attempting to close drawer...");
     try {
-      // Önce standart drawer kapatma metodunu dene
-      if (navigation.dispatch) {
-        navigation.dispatch(DrawerActions.closeDrawer());
-        console.log("Drawer closed with dispatch");
-      } else if (navigation.closeDrawer) {
-        navigation.closeDrawer();
-        console.log("Drawer closed with closeDrawer");
+      if (Platform.OS === "web") {
+        // Web'de drawer'ı kapatmak için birden fazla yöntem dene
+        if (navigation && navigation.dispatch) {
+          navigation.dispatch(DrawerActions.closeDrawer());
+          console.log("Web: Drawer closed with dispatch");
+
+          // Eğer drawer hala açıksa, ek yöntemler dene
+          setTimeout(() => {
+            if (navigation && navigation.closeDrawer) {
+              navigation.closeDrawer();
+              console.log("Web: Drawer closed with closeDrawer (fallback)");
+            }
+          }, 100);
+          return;
+        }
+
+        // Eğer dispatch çalışmazsa closeDrawer dene
+        if (navigation && navigation.closeDrawer) {
+          navigation.closeDrawer();
+          console.log("Web: Drawer closed with closeDrawer");
+          return;
+        }
+
+        // Son çare olarak sayfayı yenile
+        console.log("Web: Force reloading page to close drawer");
+        window.location.reload();
+      } else {
+        // Mobil platformlar için standart yöntem
+        if (navigation.dispatch) {
+          navigation.dispatch(DrawerActions.closeDrawer());
+          console.log("Mobile: Drawer closed with dispatch");
+        } else if (navigation.closeDrawer) {
+          navigation.closeDrawer();
+          console.log("Mobile: Drawer closed with closeDrawer");
+        }
       }
     } catch (error) {
       console.error("Error closing drawer:", error);
+      // Web'de hata durumunda sayfayı yenile
+      if (Platform.OS === "web") {
+        console.log("Web: Reloading page due to drawer close error");
+        window.location.reload();
+      }
     }
   };
 
@@ -264,6 +342,23 @@ export default function CustomDrawerContent(props) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="#2c3e50" />
+
+      {/* Web'de overlay tıklama desteği */}
+      {Platform.OS === "web" && (
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.3)",
+            zIndex: -1,
+          }}
+          onPress={closeDrawer}
+          activeOpacity={1}
+        />
+      )}
 
       {/* Header with close button */}
       <View style={styles.header}>

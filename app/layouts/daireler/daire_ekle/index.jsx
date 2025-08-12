@@ -1,10 +1,12 @@
+import DashboardLayout from "@/app/components/dashboardlayout";
+import API_BASE_URL from "@/config/api";
+import SelectionModal from "@/app/components/SelectionModal";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
-  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -13,36 +15,78 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const API_BASE_URL = "http://localhost:8000";
+import MDButton from "@/app/components/MDButton";
+import MDInput from "@/app/components/MDInput";
 
 const DaireEkle = () => {
   const [loading, setLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [addressLoading, setAddressLoading] = useState({
+    il: true,
+    mahalle: false,
+  });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [users, setUsers] = useState([]);
-  const [evSahibiModalVisible, setEvSahibiModalVisible] = useState(false);
-  const [kiraciModalVisible, setKiraciModalVisible] = useState(false);
+  const [adresVeri, setAdresVeri] = useState([]);
+  const [mahalleler, setMahalleler] = useState([]);
+
+  // Modal visibility states
+  const [modalVisible, setModalVisible] = useState({
+    il: false,
+    ilce: false,
+    mahalle: false,
+    evSahibi: false,
+    kiraci: false,
+  });
 
   const [formData, setFormData] = useState({
     Kisa_Isim: "",
     Site: "",
     Blok: "",
     Daire: "",
+    Il: "",
+    Ilce: "",
+    Mahalle: "",
     Sokak: "",
     Cadde: "",
-    Mahalle: "",
     Apartman: "",
-    Ilce: "",
-    Il: "",
     Ev_Sahibi_ID: null,
     Guncel_Kiraci_ID: null,
     Kiralik: false,
     Satilik: false,
     Istenen_Kira: null,
     Istenen_Satis_Bedeli: null,
+    KisaDonemli_Kiralik: false,
   });
+
+  useEffect(() => {
+    const fetchIlveIlceler = async () => {
+      try {
+        const res = await fetch("https://turkiyeapi.dev/api/v1/provinces", {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data && data.data) {
+          const ilveilce = data.data.map((sehir) => ({
+            il: sehir.name,
+            ilceler: sehir.districts.map((ilce) => ilce.name),
+          }));
+          setAdresVeri(ilveilce);
+        }
+      } catch (err) {
+        console.error("İl/İlçe API hatası:", err);
+        setError("Adres verileri yüklenemedi.");
+      } finally {
+        setAddressLoading((prev) => ({ ...prev, il: false }));
+      }
+    };
+    fetchIlveIlceler();
+  }, []);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -51,14 +95,7 @@ const DaireEkle = () => {
         const response = await axios.get(`${API_BASE_URL}/users`);
         setUsers(response.data);
       } catch (err) {
-        let errorMessage = "Kullanıcı listesi alınamadı";
-        if (err.response?.data?.detail) {
-          errorMessage = err.response.data.detail;
-        } else if (err.request) {
-          errorMessage =
-            "Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.";
-        }
-        setError(errorMessage);
+        setError("Kullanıcı listesi alınamadı: " + err.message);
       } finally {
         setUsersLoading(false);
       }
@@ -66,11 +103,88 @@ const DaireEkle = () => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    const fetchMahalleler = async () => {
+      if (!formData.Il || !formData.Ilce) {
+        setMahalleler([]);
+        return;
+      }
+      setAddressLoading((prev) => ({ ...prev, mahalle: true }));
+      try {
+        const res = await fetch(
+          `https://turkiyeapi.dev/api/v1/neighborhoods?province=${formData.Il}&district=${formData.Ilce}`,
+          { method: "GET", headers: { Accept: "application/json" } }
+        );
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data && data.data) {
+          const mahalleListesi = data.data.map((mahalle) => mahalle.name);
+          setMahalleler(mahalleListesi);
+        }
+      } catch (err) {
+        console.error("Mahalle API hatası:", err);
+        setMahalleler([]);
+      } finally {
+        setAddressLoading((prev) => ({ ...prev, mahalle: false }));
+      }
+    };
+
+    fetchMahalleler();
+  }, [formData.Il, formData.Ilce]);
+
+  const formatNumberForDisplay = (value) => {
+    if (value === null || value === undefined || value === "") {
+      return "";
+    }
+    const stringValue = String(value).replace(/[^0-9]/g, "");
+    if (stringValue === "") {
+      return "";
+    }
+    return new Intl.NumberFormat("tr-TR").format(Number(stringValue));
+  };
+
   const handleFieldChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handlePriceChange = (field, value) => {
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setFormData((prev) => ({
+      ...prev,
+      [field]: numericValue === "" ? null : numericValue,
+    }));
+  };
+
+  const handleIlChange = (newValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      Il: newValue || "",
+      Ilce: "",
+      Mahalle: "",
+    }));
+    setMahalleler([]);
+  };
+
+  const handleIlceChange = (newValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      Ilce: newValue || "",
+      Mahalle: "",
+    }));
+  };
+
+  // Modal açma/kapama helper fonksiyonları
+  const openModal = (type) => {
+    setModalVisible((prev) => ({ ...prev, [type]: true }));
+  };
+
+  const closeModal = (type) => {
+    setModalVisible((prev) => ({ ...prev, [type]: false }));
   };
 
   const validateForm = () => {
@@ -120,48 +234,34 @@ const DaireEkle = () => {
           : null,
       };
 
-      const response = await axios.post(`${API_BASE_URL}/daire`, dataToSend, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await axios.post(`${API_BASE_URL}/daire`, dataToSend);
+
+      setSuccess("Daire başarıyla eklendi!");
+      Alert.alert("Başarılı", "Daire başarıyla eklendi!");
+
+      // Form'u sıfırla
+      setFormData({
+        Kisa_Isim: "",
+        Site: "",
+        Blok: "",
+        Daire: "",
+        Il: "",
+        Ilce: "",
+        Mahalle: "",
+        Sokak: "",
+        Cadde: "",
+        Apartman: "",
+        Ev_Sahibi_ID: null,
+        Guncel_Kiraci_ID: null,
+        Kiralik: false,
+        Satilik: false,
+        Istenen_Kira: null,
+        Istenen_Satis_Bedeli: null,
+        KisaDonemli_Kiralik: false,
       });
-
-      if (response.status === 200 || response.status === 201) {
-        setSuccess("Daire başarıyla eklendi!");
-        Alert.alert("Başarılı", "Daire başarıyla eklendi!");
-
-        // Reset form
-        setFormData({
-          Kisa_Isim: "",
-          Site: "",
-          Blok: "",
-          Daire: "",
-          Sokak: "",
-          Cadde: "",
-          Mahalle: "",
-          Apartman: "",
-          Ilce: "",
-          Il: "",
-          Ev_Sahibi_ID: null,
-          Guncel_Kiraci_ID: null,
-          Kiralik: false,
-          Satilik: false,
-          Istenen_Kira: null,
-          Istenen_Satis_Bedeli: null,
-        });
-      }
     } catch (err) {
-      let errorMessage = "Daire eklenirken bir hata oluştu.";
-
-      if (err.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
-      } else if (err.request) {
-        errorMessage =
-          "Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.";
-      } else {
-        errorMessage = "Beklenmeyen bir hata oluştu: " + err.message;
-      }
-
+      const errorMessage =
+        err.response?.data?.detail || "Daire eklenirken bir hata oluştu.";
       setError(errorMessage);
       Alert.alert("Hata", errorMessage);
     } finally {
@@ -169,606 +269,440 @@ const DaireEkle = () => {
     }
   };
 
-  const selectEvSahibi = (user) => {
-    handleFieldChange("Ev_Sahibi_ID", user.id);
-    setEvSahibiModalVisible(false);
-  };
+  // Kullanıcılar için özel render item
 
-  const selectKiraci = (user) => {
-    handleFieldChange("Guncel_Kiraci_ID", user.id);
-    setKiraciModalVisible(false);
-  };
-
-  const getSelectedEvSahibi = () => {
-    return users.find((user) => user.id === formData.Ev_Sahibi_ID);
-  };
-
-  const getSelectedKiraci = () => {
-    return users.find((user) => user.id === formData.Guncel_Kiraci_ID);
-  };
-
-  const renderUserItem = ({ item }, onSelect) => (
-    <TouchableOpacity style={styles.modalItem} onPress={() => onSelect(item)}>
-      <Text style={styles.modalItemText}>{`${item.Ad} ${item.Soyad}`}</Text>
-    </TouchableOpacity>
-  );
-
-  const SwitchRow = ({ label, value, onValueChange }) => (
-    <View style={styles.switchRow}>
-      <Text style={styles.switchLabel}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: "#E0E0E0", true: "#2196F3" }}
-        thumbColor={value ? "#FFFFFF" : "#F4F3F4"}
-      />
-    </View>
-  );
+  const ilcelerForSelectedIl =
+    adresVeri.find((data) => data.il === formData.Il)?.ilceler || [];
+  const evSahipleri = users.filter((user) => user.Ev_Sahibi);
+  const kiracilar = users.filter((user) => user.Kiraci);
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Yeni Daire Ekle</Text>
-      </View>
-
-      <View style={styles.content}>
-        {/* Error/Success Messages */}
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        {success ? (
-          <View style={styles.successContainer}>
-            <Text style={styles.successText}>{success}</Text>
-          </View>
-        ) : null}
-
-        {/* Temel Bilgiler */}
-        <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
-
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Kısa İsim</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Kisa_Isim}
-              onChangeText={(text) => handleFieldChange("Kisa_Isim", text)}
-              placeholder="Kısa isim giriniz"
-            />
+    <DashboardLayout>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.blueHeader}>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Yeni Daire Ekle</Text>
+            </View>
           </View>
 
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Site</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Site}
-              onChangeText={(text) => handleFieldChange("Site", text)}
-              placeholder="Site adı"
-            />
-          </View>
-        </View>
+          <View style={styles.formContainer}>
+            {/* Error/Success Messages */}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity onPress={() => setError("")}>
+                  <Ionicons name="close" size={20} color="#C62828" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
-        <View style={styles.row}>
-          <View style={styles.thirdWidth}>
-            <Text style={styles.inputLabel}>Blok</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Blok}
-              onChangeText={(text) => handleFieldChange("Blok", text)}
-              placeholder="Blok"
-            />
-          </View>
+            {success ? (
+              <View style={styles.successContainer}>
+                <Text style={styles.successText}>{success}</Text>
+                <TouchableOpacity onPress={() => setSuccess("")}>
+                  <Ionicons name="close" size={20} color="#2E7D32" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
-          <View style={styles.thirdWidth}>
-            <Text style={styles.inputLabel}>Daire No *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Daire}
-              onChangeText={(text) => handleFieldChange("Daire", text)}
-              placeholder="Daire No"
-            />
-          </View>
+            {/* Temel Bilgiler */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
 
-          <View style={styles.thirdWidth}>
-            <Text style={styles.inputLabel}>Apartman</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Apartman}
-              onChangeText={(text) => handleFieldChange("Apartman", text)}
-              placeholder="Apartman"
-            />
-          </View>
-        </View>
-
-        {/* Adres Bilgileri */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Adres Bilgileri</Text>
-
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Sokak</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Sokak}
-              onChangeText={(text) => handleFieldChange("Sokak", text)}
-              placeholder="Sokak adı"
-            />
-          </View>
-
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Cadde</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Cadde}
-              onChangeText={(text) => handleFieldChange("Cadde", text)}
-              placeholder="Cadde adı"
-            />
-          </View>
-        </View>
-
-        <View style={styles.row}>
-          <View style={styles.thirdWidth}>
-            <Text style={styles.inputLabel}>Mahalle</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Mahalle}
-              onChangeText={(text) => handleFieldChange("Mahalle", text)}
-              placeholder="Mahalle"
-            />
-          </View>
-
-          <View style={styles.thirdWidth}>
-            <Text style={styles.inputLabel}>İlçe</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Ilce}
-              onChangeText={(text) => handleFieldChange("Ilce", text)}
-              placeholder="İlçe"
-            />
-          </View>
-
-          <View style={styles.thirdWidth}>
-            <Text style={styles.inputLabel}>İl</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.Il}
-              onChangeText={(text) => handleFieldChange("Il", text)}
-              placeholder="İl"
-            />
-          </View>
-        </View>
-
-        {/* Sahip ve Kiracı Bilgileri */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Sahip ve Kiracı Bilgileri</Text>
-
-        <View style={styles.row}>
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Ev Sahibi *</Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerButton,
-                !formData.Ev_Sahibi_ID && styles.pickerButtonError,
-              ]}
-              onPress={() => setEvSahibiModalVisible(true)}
-              disabled={usersLoading}
-            >
-              {usersLoading ? (
-                <ActivityIndicator size="small" color="#666" />
-              ) : (
-                <Text
-                  style={
-                    getSelectedEvSahibi()
-                      ? styles.pickerButtonText
-                      : styles.pickerPlaceholder
-                  }
-                >
-                  {getSelectedEvSahibi()
-                    ? `${getSelectedEvSahibi().Ad} ${
-                        getSelectedEvSahibi().Soyad
-                      }`
-                    : "Ev sahibi seçiniz"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.halfWidth}>
-            <Text style={styles.inputLabel}>Güncel Kiracı</Text>
-            <TouchableOpacity
-              style={styles.pickerButton}
-              onPress={() => setKiraciModalVisible(true)}
-              disabled={usersLoading}
-            >
-              {usersLoading ? (
-                <ActivityIndicator size="small" color="#666" />
-              ) : (
-                <Text
-                  style={
-                    getSelectedKiraci()
-                      ? styles.pickerButtonText
-                      : styles.pickerPlaceholder
-                  }
-                >
-                  {getSelectedKiraci()
-                    ? `${getSelectedKiraci().Ad} ${getSelectedKiraci().Soyad}`
-                    : "Kiracı seçiniz"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Durum Bilgileri */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Durum Bilgileri</Text>
-
-        <View style={styles.switchContainer}>
-          <SwitchRow
-            label="Kiralık"
-            value={formData.Kiralik}
-            onValueChange={(value) => handleFieldChange("Kiralik", value)}
-          />
-          <SwitchRow
-            label="Satılık"
-            value={formData.Satilik}
-            onValueChange={(value) => handleFieldChange("Satilik", value)}
-          />
-        </View>
-
-        {/* Conditional Price Fields */}
-        {(formData.Kiralik || formData.Satilik) && (
-          <View style={styles.row}>
-            {formData.Kiralik && (
-              <View
-                style={formData.Satilik ? styles.halfWidth : { width: "100%" }}
-              >
-                <Text style={styles.inputLabel}>İstenen Kira Bedeli</Text>
-                <View style={styles.priceInputContainer}>
-                  <TextInput
-                    style={styles.priceInput}
-                    value={formData.Istenen_Kira?.toString() || ""}
-                    onChangeText={(text) =>
-                      handleFieldChange("Istenen_Kira", text)
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small "
+                    value={formData.Kisa_Isim}
+                    onChangeText={(value) =>
+                      handleFieldChange("Kisa_Isim", value)
                     }
-                    placeholder="Kira bedeli"
-                    keyboardType="numeric"
+                    placeholder="Kısa isim giriniz"
                   />
-                  <Text style={styles.currencySymbol}>₺</Text>
+                </View>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small "
+                    value={formData.Site}
+                    onChangeText={(value) => handleFieldChange("Site", value)}
+                    placeholder="Site adı giriniz"
+                  />
                 </View>
               </View>
-            )}
 
-            {formData.Satilik && (
-              <View
-                style={formData.Kiralik ? styles.halfWidth : { width: "100%" }}
-              >
-                <Text style={styles.inputLabel}>İstenen Satış Bedeli</Text>
-                <View style={styles.priceInputContainer}>
-                  <TextInput
-                    style={styles.priceInput}
-                    value={formData.Istenen_Satis_Bedeli?.toString() || ""}
-                    onChangeText={(text) =>
-                      handleFieldChange("Istenen_Satis_Bedeli", text)
-                    }
-                    placeholder="Satış bedeli"
-                    keyboardType="numeric"
+              <View style={styles.inputRow}>
+                <View style={styles.inputThird}>
+                  <MDInput
+                    size="small "
+                    value={formData.Blok}
+                    onChangeText={(value) => handleFieldChange("Blok", value)}
+                    placeholder="Blok"
                   />
-                  <Text style={styles.currencySymbol}>₺</Text>
+                </View>
+                <View style={styles.inputThird}>
+                  <MDInput
+                    size="small "
+                    value={formData.Daire}
+                    onChangeText={(value) => handleFieldChange("Daire", value)}
+                    placeholder="Daire no**"
+                  />
+                </View>
+
+                <View style={styles.inputThird}>
+                  <MDInput
+                    size="small "
+                    value={formData.Apartman}
+                    onChangeText={(value) =>
+                      handleFieldChange("Apartman", value)
+                    }
+                    placeholder="Apartman"
+                  />
                 </View>
               </View>
-            )}
-          </View>
-        )}
-
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSaveDaire}
-          disabled={loading}
-        >
-          {loading ? (
-            <View style={styles.buttonContent}>
-              <ActivityIndicator color="#FFFFFF" size="small" />
-              <Text style={[styles.saveButtonText, { marginLeft: 10 }]}>
-                Kaydediliyor...
-              </Text>
             </View>
-          ) : (
-            <Text style={styles.saveButtonText}>Daire Ekle</Text>
-          )}
-        </TouchableOpacity>
-      </View>
 
-      {/* Ev Sahibi Selection Modal */}
-      <Modal
-        visible={evSahibiModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setEvSahibiModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ev Sahibi Seçin</Text>
-              <TouchableOpacity
-                onPress={() => setEvSahibiModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={users.filter((user) => user.Ev_Sahibi)}
-              renderItem={(props) => renderUserItem(props, selectEvSahibi)}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text style={styles.emptyListText}>Ev sahibi bulunamadı</Text>
-              }
-            />
-          </View>
-        </View>
-      </Modal>
+            {/* Adres Bilgileri */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Adres Bilgileri</Text>
 
-      {/* Kiracı Selection Modal */}
-      <Modal
-        visible={kiraciModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setKiraciModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Kiracı Seçin</Text>
-              <TouchableOpacity
-                onPress={() => setKiraciModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
+              <View style={styles.inputRow}>
+                <View style={styles.inputThird}>
+                  <SelectionModal
+                    title="İl Seçin"
+                    placeholder="İl seçin"
+                    value={formData.Il}
+                    data={adresVeri.map((data) => data.il)}
+                    onSelect={handleIlChange}
+                    loading={addressLoading.il}
+                  />
+                </View>
+
+                <View style={styles.inputThird}>
+                  <SelectionModal
+                    title="İlçe Seçin"
+                    placeholder="İlçe seçin"
+                    value={formData.Ilce}
+                    data={ilcelerForSelectedIl}
+                    onSelect={handleIlceChange}
+                    disabled={!formData.Il}
+                    emptyMessage="Önce il seçiniz"
+                  />
+                </View>
+
+                <View style={styles.inputThird}>
+                  <SelectionModal
+                    title="Mahalle Seçin"
+                    placeholder="Mahalle seçin"
+                    value={formData.Mahalle}
+                    data={mahalleler}
+                    onSelect={(value) => handleFieldChange("Mahalle", value)}
+                    disabled={!formData.Ilce}
+                    loading={addressLoading.mahalle}
+                    emptyMessage="Önce il ve ilçe seçiniz"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small "
+                    value={formData.Cadde}
+                    onChangeText={(value) => handleFieldChange("Cadde", value)}
+                    placeholder="Cadde adı"
+                  />
+                </View>
+                <View style={styles.inputHalf}>
+                  <MDInput
+                    size="small "
+                    value={formData.Sokak}
+                    onChangeText={(value) => handleFieldChange("Sokak", value)}
+                    placeholder="Sokak adı"
+                  />
+                </View>
+              </View>
             </View>
-            <FlatList
-              data={users.filter((user) => user.Kiraci)}
-              renderItem={(props) => renderUserItem(props, selectKiraci)}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text style={styles.emptyListText}>Kiracı bulunamadı</Text>
-              }
-            />
-            <TouchableOpacity
-              style={styles.clearSelectionButton}
-              onPress={() => {
-                handleFieldChange("Guncel_Kiraci_ID", null);
-                setKiraciModalVisible(false);
+
+            {/* Sahip ve Kiracı Bilgileri */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Sahip ve Kiracı Bilgileri</Text>
+
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <SelectionModal
+                    title="Ev Sahibi Seçin"
+                    placeholder="Ev sahibi seçin**"
+                    value={users.find((u) => u.id === formData.Ev_Sahibi_ID)}
+                    data={evSahipleri}
+                    onSelect={(value) =>
+                      handleFieldChange("Ev_Sahibi_ID", value.id)
+                    }
+                    loading={usersLoading}
+                    required={true}
+                    displayFormat={(user) => `${user.Ad} ${user.Soyad}`}
+                  />
+                </View>
+
+                <View style={styles.inputHalf}>
+                  <SelectionModal
+                    title="Kiracı Seçin"
+                    placeholder="Kiracı seçin"
+                    value={users.find(
+                      (u) => u.id === formData.Guncel_Kiraci_ID
+                    )}
+                    data={kiracilar}
+                    onSelect={(value) =>
+                      handleFieldChange("Guncel_Kiraci_ID", value.id)
+                    }
+                    loading={usersLoading}
+                    displayFormat={(user) => `${user.Ad} ${user.Soyad}`}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Durum Bilgileri */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Durum Bilgileri</Text>
+
+              <View style={styles.switchRow}>
+                <View style={styles.switchContainer}>
+                  <Text style={styles.switchLabel}>Kiralık</Text>
+                  <Switch
+                    value={formData.Kiralik}
+                    onValueChange={(value) =>
+                      handleFieldChange("Kiralik", value)
+                    }
+                    thumbColor={formData.Kiralik ? "#3498db" : "#f4f3f4"}
+                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                  />
+                </View>
+
+                <View style={styles.switchContainer}>
+                  <Text style={styles.switchLabel}>Satılık</Text>
+                  <Switch
+                    value={formData.Satilik}
+                    onValueChange={(value) =>
+                      handleFieldChange("Satilik", value)
+                    }
+                    thumbColor={formData.Satilik ? "#3498db" : "#f4f3f4"}
+                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                  />
+                </View>
+
+                <View style={styles.switchContainer}>
+                  <Text style={styles.switchLabel}>Kısa Dönemli Kiralık</Text>
+                  <Switch
+                    value={formData.KisaDonemli_Kiralik}
+                    onValueChange={(value) =>
+                      handleFieldChange("KisaDonemli_Kiralik", value)
+                    }
+                    thumbColor={
+                      formData.KisaDonemli_Kiralik ? "#3498db" : "#f4f3f4"
+                    }
+                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                  />
+                </View>
+              </View>
+
+              {/* Fiyat Alanları */}
+              {(formData.Kiralik || formData.KisaDonemli_Kiralik) && (
+                <View style={styles.inputContainer}>
+                  <MDInput
+                    size="small"
+                    value={formatNumberForDisplay(formData.Istenen_Kira)}
+                    onChangeText={(value) =>
+                      handlePriceChange("Istenen_Kira", value)
+                    }
+                    placeholder="İstenen Kira Bedeli (₺)"
+                    keyboardType="numeric"
+                  />
+                </View>
+              )}
+
+              {formData.Satilik && (
+                <View style={styles.inputContainer}>
+                  <MDInput
+                    size="small"
+                    value={formatNumberForDisplay(
+                      formData.Istenen_Satis_Bedeli
+                    )}
+                    onChangeText={(value) =>
+                      handlePriceChange("Istenen_Satis_Bedeli", value)
+                    }
+                    placeholder="İstenen Satış Bedeli (₺)"
+                    keyboardType="numeric"
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* Save Button */}
+            <MDButton
+              title="Daire Ekle"
+              onPress={handleSaveDaire}
+              loading={loading}
+              color="info"
+              textColor="white"
+              sx={{
+                width: "100%",
+                marginTop: 24,
               }}
             >
-              <Text style={styles.clearSelectionText}>Seçimi Temizle</Text>
-            </TouchableOpacity>
+              Daire Ekle
+            </MDButton>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
+      </ScrollView>
+    </DashboardLayout>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#f8f9fa",
   },
-  header: {
-    backgroundColor: "#2196F3",
-    padding: 20,
-    paddingTop: 50,
-  },
-  headerTitle: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  content: {
-    padding: 20,
-    backgroundColor: "white",
-    margin: 10,
-    borderRadius: 8,
-    elevation: 3,
+  headerSection: {
+    backgroundColor: "#fff",
+    margin: 16,
+    borderRadius: 12,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: "hidden",
+  },
+  blueHeader: {
+    backgroundColor: "#3498db",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  formContainer: {
+    padding: 20,
   },
   errorContainer: {
     backgroundColor: "#FFEBEE",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
     borderLeftWidth: 4,
     borderLeftColor: "#F44336",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   errorText: {
     color: "#C62828",
     fontSize: 14,
+    flex: 1,
   },
   successContainer: {
     backgroundColor: "#E8F5E8",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
     borderLeftWidth: 4,
     borderLeftColor: "#4CAF50",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   successText: {
     color: "#2E7D32",
     fontSize: 14,
+    flex: 1,
+  },
+  sectionContainer: {
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 16,
+    fontSize: 16,
+    fontWeight: "600",
     color: "#333",
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingBottom: 8,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  inputHalf: {
+    flex: 0.48,
+  },
+  inputThird: {
+    flex: 0.31,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 5,
-    color: "#666",
+    color: "#333",
+    marginBottom: 8,
   },
-  input: {
+  textInput: {
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#FAFAFA",
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: "#fff",
+  },
+
+  switchRow: {
     marginBottom: 16,
   },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  halfWidth: {
-    width: "48%",
-  },
-  thirdWidth: {
-    width: "31%",
-  },
   switchContainer: {
-    marginVertical: 10,
-  },
-  switchRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   switchLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#333",
-  },
-  pickerButton: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 6,
-    padding: 12,
-    backgroundColor: "#FAFAFA",
-    marginBottom: 16,
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  pickerButtonError: {
-    borderColor: "#F44336",
-  },
-  pickerButtonText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  pickerPlaceholder: {
-    fontSize: 16,
-    color: "#999",
+    flex: 1,
   },
   priceInputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 6,
-    backgroundColor: "#FAFAFA",
-    marginBottom: 16,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
   },
   priceInput: {
     flex: 1,
-    padding: 12,
-    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
   },
   currencySymbol: {
-    paddingRight: 12,
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "bold",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#E0E0E0",
-    marginVertical: 20,
-  },
-  saveButton: {
-    backgroundColor: "#2196F3",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  saveButtonDisabled: {
-    backgroundColor: "#90CAF9",
-  },
-  saveButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    width: "85%",
-    maxHeight: "70%",
-    borderRadius: 10,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  modalCloseButton: {
-    padding: 5,
-  },
-  modalCloseText: {
-    fontSize: 20,
-    color: "#666",
-  },
-  modalItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  emptyListText: {
-    textAlign: "center",
-    padding: 20,
-    color: "#666",
-    fontSize: 16,
-  },
-  clearSelectionButton: {
-    backgroundColor: "#FF9800",
-    padding: 12,
-    borderRadius: 6,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  clearSelectionText: {
-    color: "white",
     fontSize: 14,
-    fontWeight: "bold",
+    color: "#666",
+    paddingHorizontal: 12,
+    fontWeight: "500",
   },
 });
 

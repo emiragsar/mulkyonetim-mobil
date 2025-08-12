@@ -1,358 +1,350 @@
-import axios from "axios"; // axios'u import ediyoruz
-import React, { useCallback, useEffect, useState } from "react";
+import ImageGalleryModal from "@/app/components/shared/ImageGalleryModal.jsx";
+import LoadingView from "@/app/components/shared/LoadingView.jsx";
+import PageLayout from "@/app/components/shared/PageLayout.jsx";
+import commonStyles from "@/app/components/shared/styles.js";
+import DataTable from "@/app/components/tables";
+import React, { useState } from "react";
+import ErrorView from "@/app/components/shared/ErrorView.jsx";
+import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import {
-  ActivityIndicator, // Modal'ı import ediyoruz
-  Button, // Kapat butonu için
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+  handleViewDocuments,
+  handleViewOldTenants,
+  handleViewPhotos,
+  useTumDairelerData,
+} from "./data.js";
+const DaireTable = () => {
+  const { allDaireData, loading, error, fetchDaireler, fetchAllUsers } =
+    useTumDairelerData();
 
-// Yapısal ve konfigürasyonel importlar
-import API_BASE_URL from "../../../../config/api"; // API konfigürasyonumuzu import ediyoruz
-import DashboardLayout from "../../../components/dashboardlayout";
-import DataTableCard from "../../../components/datatablecard";
-
-// Bu sayfaya özel, küçük yardımcı bileşenler
-const TableRow = ({
-  item,
-  index,
-  onViewPhotos,
-  onViewDocuments,
-  onViewOldTenants,
-}) => (
-  <View style={[styles.tableRow, index % 2 === 0 && styles.evenRow]}>
-    <Text style={[styles.tableCell, styles.addressCell]} numberOfLines={3}>
-      {item.adres}
-    </Text>
-    <Text style={styles.tableCell}>{item.ev_sahibi}</Text>
-    <Text style={styles.tableCell}>{item.kiraci}</Text>
-    <Text style={styles.tableCell}>{item.durum}</Text>
-    <Text style={styles.tableCell}>{item.istenen_ucret}</Text>
-    <View style={styles.actionCell}>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => onViewPhotos(item.id)}
-      >
-        <Text style={styles.actionButtonText}>Foto</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => onViewDocuments(item.id)}
-      >
-        <Text style={styles.actionButtonText}>Belge</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => onViewOldTenants(item.id)}
-      >
-        <Text style={styles.actionButtonText}>Geçmiş</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-);
-
-const TumDaireler = () => {
-  // --- STATE'LER ---
-  const [loading, setLoading] = useState(true);
-  const [daireData, setDaireData] = useState([]);
-  const [error, setError] = useState(null);
-
-  // Modal'lar için state'ler
-  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
-  const [isOldTenantsVisible, setIsOldTenantsVisible] = useState(false);
-  const [galleryItems, setGalleryItems] = useState([]);
+  // Modal states
+  const [imageGalleryItems, setImageGalleryItems] = useState([]);
+  const [showGallery, setShowGallery] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [oldTenants, setOldTenants] = useState([]);
-  const [modalTitle, setModalTitle] = useState("");
+  const [selectedDaireId, setSelectedDaireId] = useState(null);
+  const [oldTenantsModalVisible, setOldTenantsModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState("");
+  const [detailModalTitle, setDetailModalTitle] = useState("");
 
-  // --- VERİ ÇEKME VE İŞLEME MANTIĞI ---
-  // (useDaireTableData hook'undan uyarlanmıştır)
-
-  // Tüm kullanıcıları tek seferde çeken ve bir haritaya dönüştüren fonksiyon
-  const fetchAllUsers = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/users`);
-      // Kullanıcıları ID'lerine göre bir obje içinde sakla (hızlı erişim için)
-      return response.data.reduce((acc, user) => {
-        acc[user.id] = user;
-        return acc;
-      }, {});
-    } catch (err) {
-      console.error("Kullanıcılar çekilirken hata oluştu:", err);
-      return {}; // Hata durumunda boş obje dön
-    }
-  }, []);
-
-  // Ana veri çekme işlemi
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Daireleri ve kullanıcıları paralel olarak çek
-        const [daireRes, userMap] = await Promise.all([
-          axios.get(`${API_BASE_URL}/daire`),
-          fetchAllUsers(),
-        ]);
-
-        // Gelen daire verisini zenginleştir (kullanıcı isimleri vb. ekle)
-        const enrichedRows = daireRes.data.map((item) => {
-          const evSahibi = userMap[item.Ev_Sahibi_ID];
-          const kiraci = item.Guncel_Kiraci_ID
-            ? userMap[item.Guncel_Kiraci_ID]
-            : null;
-
-          return {
-            id: item.Daire_ID,
-            adres: `${item.Mahalle || ""} ${item.Sokak || ""} No:${
-              item.Apartman_No || ""
-            } D:${item.Daire_No || ""} ${item.Ilce || ""}/${
-              item.Il || ""
-            }`.trim(),
-            ev_sahibi: evSahibi
-              ? `${evSahibi.Ad} ${evSahibi.Soyad}`
-              : "Bilinmiyor",
-            kiraci: kiraci ? `${kiraci.Ad} ${kiraci.Soyad}` : "-",
-            durum: item.Kiralik ? "Kiralık" : item.Satilik ? "Satılık" : "Dolu",
-            istenen_ucret: item.Kiralik
-              ? `${item.Istenen_Kira} TL`
-              : item.Satilik
-              ? `${item.Istenen_Satis_Bedeli} TL`
-              : "-",
-          };
-        });
-
-        setDaireData(enrichedRows);
-      } catch (err) {
-        setError("Veriler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.");
-        console.error("Daire verisi çekilirken hata:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [fetchAllUsers]);
-
-  // --- ETKİLEŞİM FONKSİYONLARI ---
-
-  const handleViewPhotos = async (daireId) => {
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/daire_fotograf?Daire_ID=${daireId}`
-      );
-      const items = res.data.map((p) => ({
-        uri: p.Url,
-        description: p.Fotograf_Aciklama,
-      }));
-      setGalleryItems(items);
-      setModalTitle("Daire Fotoğrafları");
-      setIsGalleryVisible(true);
-    } catch (err) {
-      console.error("Fotoğraflar çekilirken hata:", err);
-    }
+  const handleShowDetail = (detail, title) => {
+    setSelectedDetail(detail);
+    setDetailModalTitle(title);
+    setDetailModalVisible(true);
   };
 
-  const handleViewDocuments = async (daireId) => {
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/daire_belge?Daire_ID=${daireId}`
-      );
-      // Belgeler genelde PDF olabilir, açmak için farklı bir mantık gerekebilir.
-      // Şimdilik fotoğraf gibi gösteriyoruz.
-      const items = res.data.map((b) => ({
-        uri: b.Url,
-        description: b.Belge_Aciklama,
-      }));
-      setGalleryItems(items);
-      setModalTitle("Daire Belgeleri");
-      setIsGalleryVisible(true);
-    } catch (err) {
-      console.error("Belgeler çekilirken hata:", err);
-    }
+  // DataTable için kolonları tanımlıyoruz
+  const columns = [
+    {
+      Header: "ADRES",
+      accessor: "adres",
+      flex: 4,
+      align: "left",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.addressCell} numberOfLines={4}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "EV SAHİBİ",
+      accessor: "ev_sahibi",
+      flex: 2,
+      align: "left",
+      Cell: ({ value, row }) => (
+        <TouchableOpacity
+          onPress={() =>
+            handleShowDetail(
+              row.original.ev_sahibi_detail,
+              "Ev Sahibi Bilgileri"
+            )
+          }
+        >
+          <Text style={commonStyles.clickableCell} numberOfLines={2}>
+            {value}
+          </Text>
+        </TouchableOpacity>
+      ),
+    },
+    {
+      Header: "KİRACI",
+      accessor: "kiraci",
+      flex: 2,
+      align: "left",
+      Cell: ({ value, row }) => (
+        <TouchableOpacity
+          onPress={() =>
+            handleShowDetail(row.original.kiraci_detail, "Kiracı Bilgileri")
+          }
+        >
+          <Text style={commonStyles.clickableCell} numberOfLines={2}>
+            {value}
+          </Text>
+        </TouchableOpacity>
+      ),
+    },
+    {
+      Header: "DURUM",
+      accessor: "durum",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.statusCell} numberOfLines={2}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "ÜCRET",
+      accessor: "istenen_ucret",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.priceCell} numberOfLines={2}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "FOTOĞRAF",
+      accessor: "id",
+      flex: 1.2,
+      align: "center",
+      Cell: ({ value }) => (
+        <TouchableOpacity
+          style={commonStyles.actionButton}
+          onPress={() =>
+            handleViewPhotos(
+              value,
+              setImageGalleryItems,
+              setCurrentImageIndex,
+              setShowGallery
+            )
+          }
+        >
+          <Text style={commonStyles.actionButtonText}>Görüntüle</Text>
+        </TouchableOpacity>
+      ),
+    },
+    {
+      Header: "BELGE",
+      accessor: "id",
+      flex: 1.2,
+      align: "center",
+      Cell: ({ value }) => (
+        <TouchableOpacity
+          style={commonStyles.actionButton}
+          onPress={() =>
+            handleViewDocuments(
+              value,
+              setImageGalleryItems,
+              setCurrentImageIndex,
+              setShowGallery
+            )
+          }
+        >
+          <Text style={commonStyles.actionButtonText}>Görüntüle</Text>
+        </TouchableOpacity>
+      ),
+    },
+    {
+      Header: "ESKİ KİRACI",
+      accessor: "id",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <TouchableOpacity
+          style={commonStyles.actionButton}
+          onPress={() =>
+            handleViewOldTenants(
+              value,
+              fetchAllUsers,
+              setOldTenants,
+              setSelectedDaireId,
+              setOldTenantsModalVisible
+            )
+          }
+        >
+          <Text style={commonStyles.actionButtonText}>Görüntüle</Text>
+        </TouchableOpacity>
+      ),
+    },
+  ];
+
+  // Old tenants table columns
+  const oldTenantsColumns = [
+    {
+      Header: "KİRACI ADI",
+      accessor: "adSoyad",
+      flex: 2,
+      align: "left",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.tableCell} numberOfLines={2}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "DÖNEM",
+      accessor: "donem",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.tableCell} numberOfLines={2}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "AYLIK BEDEL",
+      accessor: "aylikBedel",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.tableCell} numberOfLines={1}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "TOPLAM ÖDEME",
+      accessor: "toplamOdeme",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.tableCell} numberOfLines={1}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "GECİKEN ÖDEME",
+      accessor: "gecikenOdeme",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.tableCell} numberOfLines={1}>
+          {value}
+        </Text>
+      ),
+    },
+    {
+      Header: "DEPOZİTO",
+      accessor: "depozito",
+      flex: 1.5,
+      align: "center",
+      Cell: ({ value }) => (
+        <Text style={commonStyles.tableCell} numberOfLines={1}>
+          {value}
+        </Text>
+      ),
+    },
+  ];
+
+  // DataTable için veri yapısını hazırlıyoruz
+  const tableData = {
+    columns,
+    rows: allDaireData,
   };
 
-  const handleViewOldTenants = async (daireId) => {
-    try {
-      const [res, userMap] = await Promise.all([
-        axios.get(`${API_BASE_URL}/kontrat?Daire_ID=${daireId}`),
-        fetchAllUsers(),
-      ]);
-      const filtered = res.data.filter(
-        (item) => item.Sozlesme_Durumu_Aktif === false
-      );
-      const tenants = filtered.map((item) => {
-        const user = userMap[item.Kiraci_ID];
-        return {
-          name: user ? `${user.Ad} ${user.Soyad}` : "Bilinmiyor",
-          period: `${item.Sozlesme_Baslangic_Tarihi} - ${item.Sozlesme_Bitis_Tarihi}`,
-        };
-      });
-      setOldTenants(tenants);
-      setIsOldTenantsVisible(true);
-    } catch (err) {
-      console.error("Eski kiracılar çekilirken hata:", err);
-    }
+  const oldTenantsTableData = {
+    columns: oldTenantsColumns,
+    rows: oldTenants,
   };
 
-  // --- RENDER BÖLÜMÜ ---
+  if (loading) {
+    return <LoadingView />;
+  }
 
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <ActivityIndicator
-          style={{ marginTop: 50 }}
-          size="large"
-          color="#3498db"
-        />
-      );
-    }
-    if (error) {
-      return <Text style={styles.errorText}>{error}</Text>;
-    }
-    if (daireData.length === 0) {
-      return (
-        <Text style={styles.noDataText}>Gösterilecek daire bulunamadı.</Text>
-      );
-    }
-    return daireData.map((item, index) => (
-      <TableRow
-        key={item.id}
-        item={item}
-        index={index}
-        onViewPhotos={handleViewPhotos}
-        onViewDocuments={handleViewDocuments}
-        onViewOldTenants={handleViewOldTenants}
-      />
-    ));
-  };
+  if (error) {
+    return <ErrorView error={error} onRetry={fetchDaireler} />;
+  }
 
   return (
-    <DashboardLayout>
-      <DataTableCard title="Tüm Daireler">
-        {/* TODO: Arama ve filtreleme kontrolleri buraya eklenebilir */}
+    <PageLayout
+      title="Daire Bilgileri"
+      tableData={tableData}
+      onRefresh={fetchDaireler}
+    >
+      {/* Image Gallery Modal */}
+      <ImageGalleryModal
+        visible={showGallery}
+        images={imageGalleryItems}
+        currentIndex={currentImageIndex}
+        setCurrentIndex={setCurrentImageIndex}
+        onClose={() => setShowGallery(false)}
+      />
 
-        {/* Tablo Başlığı */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, styles.addressCell]}>ADRES</Text>
-          <Text style={styles.headerCell}>EV SAHİBİ</Text>
-          <Text style={styles.headerCell}>KİRACI</Text>
-          <Text style={styles.headerCell}>DURUM</Text>
-          <Text style={styles.headerCell}>ÜCRET</Text>
-          <Text style={[styles.headerCell, styles.actionCell]}>İŞLEMLER</Text>
-        </View>
-
-        {/* Tablo İçeriği (ScrollView içinde) */}
-        <ScrollView style={styles.tableScrollView}>
-          {renderContent()}
-        </ScrollView>
-      </DataTableCard>
-
-      {/* Fotoğraf/Belge Görüntüleme Modalı */}
+      {/* Old Tenants Modal */}
       <Modal
-        visible={isGalleryVisible}
+        visible={oldTenantsModalVisible}
+        transparent={true}
         animationType="slide"
-        onRequestClose={() => setIsGalleryVisible(false)}
+        onRequestClose={() => setOldTenantsModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>{modalTitle}</Text>
-          <ScrollView>
-            {galleryItems.map((item, index) => (
-              <View key={index} style={styles.galleryItem}>
-                <Image
-                  source={{ uri: item.uri }}
-                  style={styles.galleryImage}
-                  resizeMode="contain"
-                />
-                <Text>{item.description}</Text>
-              </View>
-            ))}
-          </ScrollView>
-          <Button title="Kapat" onPress={() => setIsGalleryVisible(false)} />
+        <View style={commonStyles.modalOverlay}>
+          <View style={commonStyles.modalContent}>
+            <View style={commonStyles.modalHeader}>
+              <Text style={commonStyles.modalTitle}>Eski Kiracılar</Text>
+              <TouchableOpacity
+                onPress={() => setOldTenantsModalVisible(false)}
+                style={commonStyles.modalCloseButton}
+              >
+                <Text style={commonStyles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <DataTable
+              table={oldTenantsTableData}
+              entriesPerPage={{
+                defaultValue: 5,
+                entries: [5, 10, 15],
+              }}
+              canSearch={false}
+              showTotalEntries={true}
+              isSorted={false}
+              noEndBorder={false}
+            />
+          </View>
         </View>
       </Modal>
 
-      {/* Eski Kiracılar Modalı */}
+      {/* Detail Modal */}
       <Modal
-        visible={isOldTenantsVisible}
+        visible={detailModalVisible}
+        transparent={true}
         animationType="slide"
-        onRequestClose={() => setIsOldTenantsVisible(false)}
+        onRequestClose={() => setDetailModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Geçmiş Kiracılar</Text>
-          <ScrollView>
-            {oldTenants.map((tenant, index) => (
-              <View key={index} style={styles.tenantItem}>
-                <Text style={styles.tenantName}>{tenant.name}</Text>
-                <Text>Dönem: {tenant.period}</Text>
-              </View>
-            ))}
-          </ScrollView>
-          <Button title="Kapat" onPress={() => setIsOldTenantsVisible(false)} />
+        <View style={commonStyles.modalOverlay}>
+          <View style={commonStyles.detailModalContent}>
+            <View style={commonStyles.modalHeader}>
+              <Text style={commonStyles.modalTitle}>{detailModalTitle}</Text>
+              <TouchableOpacity
+                onPress={() => setDetailModalVisible(false)}
+                style={commonStyles.modalCloseButton}
+              >
+                <Text style={commonStyles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={commonStyles.detailContent}>
+              <Text style={commonStyles.detailText}>{selectedDetail}</Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={commonStyles.closeButton}
+              onPress={() => setDetailModalVisible(false)}
+            >
+              <Text style={commonStyles.closeButtonText}>Kapat</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
-    </DashboardLayout>
+    </PageLayout>
   );
 };
 
-// --- STYLESHEET ---
-const styles = StyleSheet.create({
-  // ... (DataTableCard, DashboardLayout stilleri dışındaki tüm stiller)
-  tableScrollView: { maxHeight: 600 }, // Uzun listeler için scroll
-  tableHeader: {
-    flexDirection: "row",
-    padding: 10,
-    backgroundColor: "#f0f0f0",
-    borderBottomWidth: 1,
-    borderColor: "#ddd",
-  },
-  headerCell: {
-    flex: 1,
-    fontWeight: "bold",
-    fontSize: 10,
-    textAlign: "center",
-  },
-  tableRow: {
-    flexDirection: "row",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
-    alignItems: "center",
-  },
-  evenRow: { backgroundColor: "#f9f9f9" },
-  tableCell: { flex: 1, fontSize: 12, textAlign: "center" },
-  addressCell: { flex: 2, textAlign: "left" },
-  actionCell: {
-    flex: 1.5,
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  actionButton: {
-    backgroundColor: "#3498db",
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-  },
-  actionButtonText: { color: "white", fontSize: 10 },
-  errorText: { color: "red", textAlign: "center", margin: 20 },
-  noDataText: { color: "#666", textAlign: "center", margin: 20 },
-  // Modal Stilleri
-  modalContainer: { flex: 1, paddingTop: 50, padding: 20 },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  galleryItem: { marginBottom: 20, alignItems: "center" },
-  galleryImage: { width: "100%", height: 200, marginBottom: 10 },
-  tenantItem: { padding: 10, borderBottomWidth: 1, borderColor: "#ccc" },
-  tenantName: { fontWeight: "bold" },
-});
+// Styles are now in shared/styles.js
 
-export default TumDaireler;
+export default DaireTable;

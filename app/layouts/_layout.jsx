@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import CustomDrawerContent from "../components/CustomDrawerContent";
+import ProtectedRoute from "../components/shared/ProtectedRoute";
 
 function CustomHeader({ title }) {
   const navigation = useNavigation();
@@ -46,9 +47,6 @@ function CustomHeader({ title }) {
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="notifications-outline" size={22} color="#2c3e50" />
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.iconButton}
           onPress={handleSettingsPress}
@@ -62,217 +60,277 @@ function CustomHeader({ title }) {
 
 export default function LayoutsLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Drawer
-        drawerContent={CustomDrawerContent}
-        screenOptions={{
-          headerShown: true,
-          header: ({ route }) => {
-            let title = "Dashboard";
+    <ProtectedRoute>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Drawer
+          drawerContent={CustomDrawerContent}
+          screenOptions={{
+            headerShown: true,
+            header: ({ route }) => {
+              let title = "Dashboard";
 
-            // Nested route'lar için title belirleme
-            if (route.name === "index") {
-              title = "Dashboard";
-            } else if (route.name.includes("kisiler")) {
-              if (route.name.includes("kisi_ekle")) {
-                title = "Kişi Ekle";
-              } else if (route.name.includes("evsahipleri")) {
-                title = "Ev Sahipleri";
-              } else if (route.name.includes("kiracilar")) {
-                title = "Kiracılar";
-              } else if (route.name.includes("ustalar")) {
-                title = "Ustalar";
-              } else if (route.name.includes("yatirimcilar")) {
-                title = "Yatırımcılar";
+              // Nested route'lar için title belirleme
+              if (route.name === "index") {
+                title = "Dashboard";
+              } else if (route.name.includes("kisiler")) {
+                if (route.name.includes("kisi_ekle")) {
+                  title = "Kişi Ekle";
+                } else if (route.name.includes("kisi_duzenle")) {
+                  title = "Kişi Düzenle";
+                } else if (route.name.includes("evsahipleri")) {
+                  title = "Ev Sahipleri";
+                } else if (route.name.includes("kiracilar")) {
+                  title = "Kiracılar";
+                } else if (route.name.includes("ustalar")) {
+                  title = "Ustalar";
+                } else if (route.name.includes("yatirimcilar")) {
+                  title = "Yatırımcılar";
+                }
+              } else if (route.name.includes("daireler")) {
+                if (route.name.includes("daire_ekle")) {
+                  title = "Daire Ekle";
+                } else if (route.name.includes("tumdaireler")) {
+                  title = "Tüm Daireler";
+                } else if (route.name.includes("kiracilidaireler")) {
+                  title = "Kiracılı Daireler";
+                } else if (route.name.includes("bosdaireler")) {
+                  title = "Boş Daireler";
+                } else if (route.name.includes("tahliye_edilecekler")) {
+                  title = "Tahliye Edilecekler";
+                } else if (route.name.includes("teknik_takip")) {
+                  title = "Teknik Takip";
+                }
+              } else if (route.name.includes("kontratlar")) {
+                if (route.name.includes("kontrat_yonetim")) {
+                  title = "Kontrat Yönetim";
+                } else if (route.name.includes("kontrat")) {
+                  title = "Kira Kontratları";
+                }
+              } else if (route.name.includes("finans")) {
+                if (route.name.includes("transferler")) {
+                  title = "Transferler";
+                } else if (route.name.includes("kisibasigelirgider")) {
+                  title = "Kişi Bazlı Gelir/Gider";
+                } else if (route.name.includes("donemselfinansal")) {
+                  title = "Dönemsel Finansal Özet";
+                }
+              } else if (route.name.includes("arizalar")) {
+                if (route.name.includes("ariza_ekle")) {
+                  title = "Arıza Ekle";
+                } else if (route.name.includes("ariza")) {
+                  title = "Arızalar";
+                }
+              } else if (route.name === "Settings") {
+                title = "Ayarlar";
+              } else if (route.name.includes("ilan")) {
+                title = "Ilanlar";
+              } else if (route.name.includes("ilan-detay")) {
+                title = "Ilanlar";
+              } else if (route.name.includes("rezervasyon")) {
+                title = "Rezervasyon";
+              } else {
+                title = route.name;
               }
-            } else if (route.name.includes("daireler")) {
-              if (route.name.includes("daire_ekle")) {
-                title = "Daire Ekle";
-              } else if (route.name.includes("tumdaireler")) {
-                title = "Tüm Daireler";
-              } else if (route.name.includes("kiracilidaireler")) {
-                title = "Kiracılı Daireler";
-              } else if (route.name.includes("bosdaireler")) {
-                title = "Boş Daireler";
-              } else if (route.name.includes("tahliye_edilecekler")) {
-                title = "Tahliye Edilecekler";
-              } else if (route.name.includes("teknik_takip")) {
-                title = "Teknik Takip";
-              }
-            } else if (route.name.includes("kontratlar")) {
-              if (route.name.includes("kontrat_yonetim")) {
-                title = "Kontrat Yönetim";
-              } else if (route.name.includes("kontrat")) {
-                title = "Kira Kontratları";
-              }
-            } else if (route.name.includes("finans")) {
-              if (route.name.includes("transferler")) {
-                title = "Transferler";
-              } else if (route.name.includes("kisibasigelirgider")) {
-                title = "Kişi Bazlı Gelir/Gider";
-              } else if (route.name.includes("donemselfinansal")) {
-                title = "Dönemsel Finansal Özet";
-              }
-            } else if (route.name.includes("arizalar")) {
-              if (route.name.includes("ariza_ekle")) {
-                title = "Arıza Ekle";
-              } else if (route.name.includes("ariza")) {
-                title = "Arızalar";
-              }
-            } else if (route.name === "Settings") {
-              title = "Ayarlar";
-            } else {
-              title = route.name;
-            }
 
-            return <CustomHeader title={title} />;
-          },
-          drawerStyle: {
-            backgroundColor: "#2c3e50",
-            width: 280,
-          },
-          drawerActiveTintColor: "#3498db",
-          drawerInactiveTintColor: "#ecf0f1",
-          drawerType: "front",
-          overlayColor: "rgba(0,0,0,0.5)",
-          swipeEnabled: true,
-          swipeEdgeWidth: 50,
-        }}
-      >
-        <Drawer.Screen
-          name="index"
-          options={{
-            drawerItemStyle: { display: "none" },
+              return <CustomHeader title={title} />;
+            },
+            drawerStyle: {
+              backgroundColor: "#2c3e50",
+              width: 280,
+              ...Platform.select({
+                web: {
+                  position: "absolute",
+                  zIndex: 1000,
+                },
+              }),
+            },
+            overlayColor: "rgba(0,0,0,0.5)",
+            drawerActiveTintColor: "#3498db",
+            drawerInactiveTintColor: "#ecf0f1",
+            drawerType: Platform.OS === "web" ? "slide" : "front",
+            swipeEnabled: Platform.OS !== "web",
+            swipeEdgeWidth: Platform.OS === "web" ? 0 : 50,
           }}
-        />
+        >
+          <Drawer.Screen
+            name="index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
 
-        {/* Kişiler Alt Klasörleri */}
-        <Drawer.Screen
-          name="kisiler/kisi_ekle/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="kisiler/evsahipleri/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="kisiler/kiracilar/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="kisiler/ustalar/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="kisiler/yatirimcilar/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
+          {/* Kişiler Alt Klasörleri */}
+          <Drawer.Screen
+            name="kisiler/kisi_ekle/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="kisiler/kisi_duzenle/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="kisiler/evsahipleri/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="kisiler/kiracilar/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="kisiler/ustalar/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="kisiler/yatirimcilar/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
 
-        {/* Daireler Alt Klasörleri */}
-        <Drawer.Screen
-          name="daireler/daire_ekle/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="daireler/tumdaireler/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="daireler/kiracilidaireler/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="daireler/bosdaireler/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="daireler/tahliye_edilecekler/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="daireler/teknik_takip/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
+          {/* Daireler Alt Klasörleri */}
+          <Drawer.Screen
+            name="daireler/daire_ekle/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="daireler/tumdaireler/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="daireler/kiracilidaireler/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="daireler/bosdaireler/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="daireler/tahliye_edilecekler/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="daireler/teknik_takip/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
 
-        {/* Kontratlar Alt Klasörleri */}
-        <Drawer.Screen
-          name="kontratlar/kontrat/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="kontratlar/kontrat_yonetim/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
+          {/* Kontratlar Alt Klasörleri */}
+          <Drawer.Screen
+            name="kontratlar/kontrat/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="kontratlar/kontrat_yonetim/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
 
-        {/* Finans Alt Klasörleri */}
-        <Drawer.Screen
-          name="finans/transferler/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="finans/kisibasigelirgider/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="finans/donemselfinansal/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
+          {/* Finans Alt Klasörleri */}
+          <Drawer.Screen
+            name="finans/transferler/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="finans/kisibasigelirgider/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="finans/donemselfinansal/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
 
-        {/* Arızalar Alt Klasörleri */}
-        <Drawer.Screen
-          name="arizalar/ariza_ekle/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-        <Drawer.Screen
-          name="arizalar/ariza/index"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
+          {/* Arızalar Alt Klasörleri */}
+          <Drawer.Screen
+            name="arizalar/ariza_ekle/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="arizalar/ariza/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
 
-        {/* Settings */}
-        <Drawer.Screen
-          name="Settings"
-          options={{
-            drawerItemStyle: { display: "none" },
-          }}
-        />
-      </Drawer>
-    </GestureHandlerRootView>
+          {/* İlan Alt Klasörleri */}
+          <Drawer.Screen
+            name="ilan/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="ilan/IlanFilters"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="ilan/IlanForm"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="ilan/formfields"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="ilan-detay/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+          <Drawer.Screen
+            name="rezervasyon/index"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+
+          {/* Settings */}
+          <Drawer.Screen
+            name="Settings"
+            options={{
+              drawerItemStyle: { display: "none" },
+            }}
+          />
+        </Drawer>
+      </GestureHandlerRootView>
+    </ProtectedRoute>
   );
 }
 
